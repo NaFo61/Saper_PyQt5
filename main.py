@@ -91,6 +91,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
                 cursor = connect.cursor()
                 result = cursor.execute("""
                         SELECT * FROM records
+                        ORDER BY time
                         """).fetchall()
 
                 # Заполнили размеры таблицы
@@ -176,7 +177,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
 
     def update_squares(self, restart=False):
         try:
-            print(self.time)
             if self.win_detect:
                 self.L_3.setText('ПОБЕДА!')
             elif self.lose_detect:
