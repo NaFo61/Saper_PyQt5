@@ -26,23 +26,69 @@
     <property name="font">
      <font>
       <pointsize>12</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="P_start">
      <widget class="QPushButton" name="B_start_play">
       <property name="geometry">
        <rect>
         <x>300</x>
-        <y>320</y>
+        <y>210</y>
         <width>200</width>
         <height>60</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>16</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
       <property name="text">
        <string>Играть!</string>
+      </property>
+     </widget>
+     <widget class="QTableWidget" name="TW">
+      <property name="geometry">
+       <rect>
+        <x>150</x>
+        <y>400</y>
+        <width>500</width>
+        <height>300</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>16</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>350</x>
+        <y>340</y>
+        <width>121</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>16</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Рекорды</string>
       </property>
      </widget>
     </widget>
@@ -161,20 +207,20 @@
      <widget class="QLabel" name="L_1">
       <property name="geometry">
        <rect>
-        <x>150</x>
+        <x>160</x>
         <y>0</y>
         <width>141</width>
         <height>30</height>
        </rect>
       </property>
       <property name="text">
-       <string>Игры:</string>
+       <string>Время:</string>
       </property>
      </widget>
      <widget class="QLabel" name="L_2">
       <property name="geometry">
        <rect>
-        <x>510</x>
+        <x>530</x>
         <y>0</y>
         <width>141</width>
         <height>30</height>
@@ -202,13 +248,15 @@
        <rect>
         <x>150</x>
         <y>30</y>
-        <width>161</width>
+        <width>71</width>
         <height>41</height>
        </rect>
       </property>
       <property name="font">
        <font>
         <pointsize>10</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
        </font>
       </property>
       <property name="text">
@@ -218,15 +266,17 @@
      <widget class="QLabel" name="L_2_1">
       <property name="geometry">
        <rect>
-        <x>510</x>
+        <x>530</x>
         <y>30</y>
-        <width>141</width>
-        <height>41</height>
+        <width>181</width>
+        <height>81</height>
        </rect>
       </property>
       <property name="font">
        <font>
         <pointsize>10</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
        </font>
       </property>
       <property name="text">
@@ -245,6 +295,8 @@
       <property name="font">
        <font>
         <pointsize>16</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
        </font>
       </property>
       <property name="text">

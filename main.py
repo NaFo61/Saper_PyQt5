@@ -1,10 +1,12 @@
 import sys
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, \
-    QSlider, QMessageBox
-from PyQt5.QtGui import QIcon
+    QSlider, QMessageBox, QTableWidgetItem, QHeaderView
+from PyQt5.QtGui import QIcon, QPalette, QColor
 import random
+import sqlite3
+import datetime as dt
 
 from file_2 import Ui_MainWindow
 
@@ -84,6 +86,61 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         self.B_start_play.clicked.connect(self.setting)
         # \=================== BUTTON EVENT ===================/
 
+        try:
+            with sqlite3.connect('database.db') as connect:
+                cursor = connect.cursor()
+                result = cursor.execute("""
+                        SELECT * FROM records
+                        """).fetchall()
+
+                # Заполнили размеры таблицы
+                if result:
+
+                    self.TW.setRowCount(len(result))
+                    self.TW.setColumnCount(4)
+
+                    self.TW.clear()
+                    self.TW.setHorizontalHeaderLabels(
+                        ['Разм. поля', 'Кол. мин', 'Время', 'Дата'])
+                    for i, elem in enumerate(result):
+                        for j, val in enumerate(tuple(elem[1:])):
+                            self.TW.setItem(i, j,
+                                            QTableWidgetItem(str(val)))
+                    header = self.TW.horizontalHeader()
+                    for i in range(self.TW.columnCount()):
+                        header.setSectionResizeMode(i, QHeaderView.Stretch)
+
+                    # Создаем палитру с серыми цветами
+                    palette = QPalette()
+                    palette.setColor(QPalette.Window, QColor(53, 53, 53))
+                    palette.setColor(QPalette.WindowText, Qt.black)
+                    palette.setColor(QPalette.Base, QColor(15, 15, 15))
+                    palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+                    palette.setColor(QPalette.ToolTipBase, Qt.black)
+                    palette.setColor(QPalette.ToolTipText, Qt.white)
+                    palette.setColor(QPalette.Text, Qt.white)
+                    palette.setColor(QPalette.Button, QColor(53, 53, 53))
+                    palette.setColor(QPalette.ButtonText, Qt.white)
+                    palette.setColor(QPalette.BrightText, Qt.red)
+                    palette.setColor(QPalette.Link, QColor(42, 130, 218))
+                    palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+                    palette.setColor(QPalette.HighlightedText, Qt.black)
+
+                    # Устанавливаем палитру для нашей таблицы
+                    self.TW.setPalette(palette)
+
+                    # Задаем стиль границ для ячеек таблицы
+                    self.TW.setStyleSheet(
+                        "QTableView { border: 1px solid grey; color: black; font-size: 20px;}")
+
+                    # Задаем стиль для заголовка таблицы
+                    self.TW.horizontalHeader().setStyleSheet(
+                        "QHeaderView::section { background-color: grey; color: white; }")
+
+
+        except Exception as e:
+            print(e)
+
     def new_game(self):
         self.map = [['.' for i in range(self.value)] for j in range(self.value)]
         self.MINES = []
@@ -97,6 +154,14 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
     def restart_game(self):
         self.del_last_game()
         self.new_game()
+
+        self.date_start = dt.datetime.now().date()
+
+        self.time = 0
+        self.is_running = False
+
+        self.start_timer()
+
         self.anti_lose = False
         self.update_squares(restart=True)
 
@@ -111,6 +176,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
 
     def update_squares(self, restart=False):
         try:
+            print(self.time)
             if self.win_detect:
                 self.L_3.setText('ПОБЕДА!')
             elif self.lose_detect:
@@ -120,7 +186,9 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
 
             len_of_checked_buttons = len(self.checked)
             count_of_left = self.value ** 2 - self.count_of_mines - len_of_checked_buttons
-            self.L_1_1.setText(f"Ост. клеток: {count_of_left}")
+            self.L_2_1.setText(f"Размер поля: {self.value}/{self.value}\n"
+                               f"Количество мин: {self.count_of_mines}\n"
+                               f"Ост. клеток: {count_of_left}")
 
             for row in range(self.value):
                 for col in range(self.value):
@@ -208,7 +276,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         self.check_win()
 
     def lose(self, square):
-        print(self.anti_lose)
+        self.stop_timer()
         if self.anti_lose:
             i, j = square // self.value, square % self.value
             self.map[i][j] = '0'
@@ -236,8 +304,28 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         return True
 
     def win(self):
+        self.set_to_database()
+
         self.win_detect = True
         self.update_squares()
+
+    def set_to_database(self):
+        try:
+            difference = self.time
+            date = str(self.date_start).split('-')
+            date = f"{date[2]}-{date[1]}-{date[0]}"
+            with sqlite3.connect('database.db') as connect:
+                cursor = connect.cursor()
+
+                sql = f"""
+                INSERT INTO records(value, mines, time, date)
+                VALUES ("{self.value}", "{self.count_of_mines}", "{difference}", "{date}")
+                """
+
+                cursor.execute(sql)
+                connect.commit()
+        except Exception as e:
+            print(e)
 
     def get_surrounding_mines(self, row, col):
         mines = 0
@@ -348,11 +436,41 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
             for mine in self.MINES:
                 self.buttons[mine].setIcon(QIcon(''))
 
+    def set_time(self):
+        self.L_3.setText(str(self.time_))
+
+    def start_timer(self):
+        if not self.is_running:
+            self.timer.start(1000)
+            self.is_running = True
+
+    def stop_timer(self):
+        if self.is_running:
+            self.timer.stop()
+            self.is_running = False
+
+    def update_timer(self):
+        self.time += 1
+
+        self.L_1_1.setText(str(self.time))
+
     def play(self):
         self.new_game()
 
-        self.L_2_1.setText(f"Размер: {self.value}/{self.value}\n"
-                           f"Кол. мин: {self.count_of_mines}")
+        self.date_start = dt.datetime.now().date()
+
+        self.timer = QTimer(self)
+
+        self.time = 0
+        self.is_running = False
+
+        self.timer.timeout.connect(self.update_timer)
+
+        self.start_timer()
+
+        self.L_2_1.setText(f"Размер поля: {self.value}/{self.value}\n"
+                           f"Количество мин: {self.count_of_mines}\n"
+                           f"Ост. клеток: {self.value ** 2 - self.count_of_mines}")
 
         # print(self.value, self.count_of_mines)
         self.stackedWidget.setCurrentWidget(self.P_play)
@@ -389,8 +507,11 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
                                "color: #737373; "
                                )
 
+        self.L_1_1.setAlignment(Qt.AlignCenter)
+
         self.L_1_1.setStyleSheet("font-size: 20px; "
                                  "color: #545454; "
+                                 "text-align: center;"
                                  )
 
         self.L_2.setStyleSheet("font-size: 20px; "
