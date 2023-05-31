@@ -22,6 +22,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         self.value = 10  # Размер поля
         self.size = 550 // self.value  # Размер клеток
         self.count_of_mines = 15  # Количество мин
+
         self.MINES = None
         self.anti_lose = False
         self.buttons = []
