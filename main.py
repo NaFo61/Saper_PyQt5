@@ -1,68 +1,14 @@
-import sys
-
 from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QIcon, QPalette, QColor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, \
     QSlider, QMessageBox, QTableWidgetItem, QHeaderView
-from PyQt5.QtGui import QIcon, QPalette, QColor
+
+import sys
 import random
 import sqlite3
 import datetime as dt
 
 from file_2 import Ui_MainWindow
-
-
-def generate_neighbors(value, square):
-    value, square = int(value), int(square)
-    if square == 0:  # Левый верхний
-        neighbors = [value - value + 1,
-                     value,
-                     value + 1]
-    elif square == value - 1:  # Правый верхний
-        neighbors = [value - 2,
-                     value * 2 - 2,
-                     value * 2 - 1]
-    elif square == value * (value - 1):  # Левый нижний
-        neighbors = [value * (value - 2),
-                     value * (value - 2) + 1,
-                     value * (value - 1) + 1]
-    elif square == value * value - 1:  # Правый нижний
-        neighbors = [value * value - 2,
-                     value * (value - 1) - 1,
-                     value * (value - 1) - 2]
-    elif square in list(range(1, value - 1)):  # Верхняя грань
-        neighbors = [square - 1,
-                     value + square - 1,
-                     value + square,
-                     value + square + 1,
-                     square + 1]
-    elif square in list(range(value, value * (value - 1), value)):  # Левая грань
-        neighbors = [square - value,
-                     square - value + 1,
-                     square + 1,
-                     square + value,
-                     square + value + 1]
-    elif square in list(range(value * (value - 1) + 1, value * value - 1)):  # Нижняя грань
-        neighbors = [square - 1,
-                     square - value - 1,
-                     square - value,
-                     square - value + 1,
-                     square + 1]
-    elif square in list(range(value - 1, value * value, value)):  # Правая грань
-        neighbors = [square - value,
-                     square - value - 1,
-                     square - 1,
-                     square + value - 1,
-                     square + value]
-    else:  # Середина
-        neighbors = [square - value - 1,
-                     square - value,
-                     square - value + 1,
-                     square + 1,
-                     square + value + 1,
-                     square + value,
-                     square + value - 1,
-                     square - 1]
-    return neighbors
 
 
 class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
@@ -79,13 +25,23 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         self.MINES = None
         self.anti_lose = False
         self.buttons = []
+        self.map = None
+        self.checked = None
+        self.first_move = None
+        self.win_detect = None
+        self.lose_detect = None
+        self.last_lose_square = None
+        self.date_start = None
+        self.timer = None
+        self.time = None
+        self.is_running = None
         # \=================== CONST ===================/
 
-        # \=================== BUTTON EVENT ===================/
-        # Играть:
+        # /=================== BUTTON EVENT ===================\
         self.B_start_play.clicked.connect(self.setting)
         # \=================== BUTTON EVENT ===================/
 
+        # /=================== TABLE UPDATE ===================\
         try:
             with sqlite3.connect('database.db') as connect:
                 cursor = connect.cursor()
@@ -137,13 +93,12 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
                     # Задаем стиль для заголовка таблицы
                     self.TW.horizontalHeader().setStyleSheet(
                         "QHeaderView::section { background-color: grey; color: white; }")
-
-
         except Exception as e:
             print(e)
+        # \=================== TABLE UPDATE ===================/
 
     def new_game(self):
-        self.map = [['.' for i in range(self.value)] for j in range(self.value)]
+        self.map = [['.' for _ in range(self.value)] for _ in range(self.value)]
         self.MINES = []
         self.checked = set()
         self.first_move = True
@@ -157,7 +112,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         self.new_game()
 
         self.date_start = dt.datetime.now().date()
-
         self.time = 0
         self.is_running = False
 
@@ -196,12 +150,10 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
                         square_number = row * self.value + col
                         square = self.buttons[square_number]
                         content = self.map[row][col]
-                        if (row, col) not in self.checked and self.lose_detect == False:
+                        if (row, col) not in self.checked and not self.lose_detect:
                             square.setText('')
                         elif content == '*':
                             square.setText('')
-                            # if self.lose_detect is True:
-                            #     square.setStyleSheet('background-color: #f00')
                         else:
                             if (row, col) in self.checked:
                                 if content != '0':
@@ -228,7 +180,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
                                 square.setStyleSheet('background-color: #ff8585;')
                                 if square_number == self.last_lose_square:
                                     square.setStyleSheet('background-color: #fc4e4e;')
-
         except Exception as e:
             print(e, 'update_squares')
 
@@ -246,7 +197,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
                 elif user_click:
                     self.lose(square)
                 self.update_squares()
-
         except Exception as e:
             print(e)
 
@@ -391,7 +341,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
             print(f"Setting value | {value=} | {self.count_of_mines=}")
             if self.count_of_mines == 25 and value == 5:
                 self.S_setting_value.setValue(6)
-                # self.LCD_setting_value.display(6)
             else:
                 self.value = value
                 self.size = 550 // self.value
@@ -416,19 +365,12 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
 
     def setting(self):
         self.B_anti_losee.setStyleSheet("border: 0px; ")
-
         self.B_anti_losee.clicked.connect(self.anti_losee)
-
         self.stackedWidget.setCurrentWidget(self.P_setting)
-
         self.setting_slyders()
-
-        print('Настройки')
         # /=================== BUTTON EVENT ===================\
-
         # Играть:
         self.B_setting_play.clicked.connect(self.play)
-
         # \=================== BUTTON EVENT ===================/
 
     def del_last_game(self):
@@ -451,16 +393,12 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
 
     def update_timer(self):
         self.time += 1
-
         self.L_1_1.setText(str(self.time))
 
     def play(self):
         self.new_game()
-
         self.date_start = dt.datetime.now().date()
-
         self.timer = QTimer(self)
-
         self.time = 0
         self.is_running = False
 
@@ -553,3 +491,9 @@ if __name__ == '__main__':
     mywindow.setStyleSheet("background-color: #d6d6d6;")
     mywindow.show()
     sys.exit(app.exec())
+
+
+"""
+Это было, через кровь, через пот, ноооо рекурсия сработала.
+Признаю, надо было использовать условия, но, я не умею, писать код, у меня лапки.
+"""
