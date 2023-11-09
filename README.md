@@ -32,7 +32,7 @@
 1. Склонируйте репозиторий на свой компьютер:
 
    ```shell
-   git clone git@github.com:NaFo61/Saper-PyQt5.git
+   git clone git@github.com:NaFo61/Saper_PyQt5.git
    ```
 
 2. Создайте виртуальное окружение и активируйте его:
