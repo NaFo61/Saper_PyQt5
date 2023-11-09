@@ -1,0 +1,15 @@
+stages:
+  - linting
+
+flake8:
+  stage: linting
+  image: registry.gitlab.com/pipeline-components/flake8:latest
+  script:
+    - pip install flake8 flake8-quotes flake8-import-order pep8-naming
+    - flake8 --verbose --import-order-style=google
+
+black_check:
+  stage: linting
+  image: registry.gitlab.com/pipeline-components/black:latest
+  script:
+    - black --check --config .black .

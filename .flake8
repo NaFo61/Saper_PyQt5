@@ -1,0 +1,8 @@
+[flake8]
+extend-ignore = E203
+exclude = .git,pycache,docs/source/conf.py,old,build,dist,venv,migrations,file_2.py
+max-complexity = 10
+inline-quotes = "
+max-line-length = 79
+black-config = .black
+application-import-names = catalog, about, core, homepage, lyceum

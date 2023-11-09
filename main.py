@@ -1,14 +1,24 @@
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QIcon, QPalette, QColor
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, \
-    QSlider, QMessageBox, QTableWidgetItem, QHeaderView
-
-import sys
+import datetime as dt
 import random
 import sqlite3
-import datetime as dt
+import sys
 
-from file_2 import Ui_MainWindow
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QColor, QIcon, QPalette
+from PyQt5.QtWidgets import (
+    QApplication,
+    QHeaderView,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QSlider,
+    QTableWidgetItem,
+    QVBoxLayout,
+)
+
+from ui.file import Ui_MainWindow
+
+__all__ = []
 
 
 class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
@@ -44,26 +54,32 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
 
         # /=================== TABLE UPDATE ===================\
         try:
-            with sqlite3.connect('database.db') as connect:
+            with sqlite3.connect("data/database.db") as connect:
                 cursor = connect.cursor()
-                result = cursor.execute("""
-                        SELECT * FROM records
+                result = cursor.execute(
+                    """
+                        SELECT * FROM board
                         ORDER BY time
-                        """).fetchall()
+                    """,
+                ).fetchall()
 
                 # Заполнили размеры таблицы
                 if result:
-
                     self.TW.setRowCount(len(result))
                     self.TW.setColumnCount(4)
 
                     self.TW.clear()
                     self.TW.setHorizontalHeaderLabels(
-                        ['Разм. поля', 'Кол. мин', 'Время', 'Дата'])
+                        [
+                            "Разм. поля",
+                            "Кол. мин",
+                            "Время",
+                            "Дата",
+                        ],
+                    )
                     for i, elem in enumerate(result):
                         for j, val in enumerate(tuple(elem[1:])):
-                            self.TW.setItem(i, j,
-                                            QTableWidgetItem(str(val)))
+                            self.TW.setItem(i, j, QTableWidgetItem(str(val)))
                     header = self.TW.horizontalHeader()
                     for i in range(self.TW.columnCount()):
                         header.setSectionResizeMode(i, QHeaderView.Stretch)
@@ -73,7 +89,10 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
                     palette.setColor(QPalette.Window, QColor(53, 53, 53))
                     palette.setColor(QPalette.WindowText, Qt.black)
                     palette.setColor(QPalette.Base, QColor(15, 15, 15))
-                    palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+                    palette.setColor(
+                        QPalette.AlternateBase,
+                        QColor(53, 53, 53),
+                    )
                     palette.setColor(QPalette.ToolTipBase, Qt.black)
                     palette.setColor(QPalette.ToolTipText, Qt.white)
                     palette.setColor(QPalette.Text, Qt.white)
@@ -89,17 +108,23 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
 
                     # Задаем стиль границ для ячеек таблицы
                     self.TW.setStyleSheet(
-                        "QTableView { border: 1px solid grey; color: black; font-size: 20px;}")
+                        "QTableView { border: 1px solid grey; color: black; "
+                        "font-size: 20px;}",
+                    )
 
                     # Задаем стиль для заголовка таблицы
                     self.TW.horizontalHeader().setStyleSheet(
-                        "QHeaderView::section { background-color: grey; color: white; }")
+                        "QHeaderView::section { background-color: grey; "
+                        "color: white; }",
+                    )
         except Exception as e:
             print(e)
         # \=================== TABLE UPDATE ===================/
 
     def new_game(self):
-        self.map = [['.' for _ in range(self.value)] for _ in range(self.value)]
+        self.map = [
+            ["." for _ in range(self.value)] for _ in range(self.value)
+        ]
         self.MINES = []
         self.checked = set()
         self.first_move = True
@@ -127,62 +152,78 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
                 value = self.map[row_index][col_index]
                 if value.isdigit():
                     square = row_index * self.value + col_index
-                    print(square)
-                    self.buttons[square].setStyleSheet('background-color: #f00')
+                    self.buttons[square].setStyleSheet(
+                        "background-color: #f00",
+                    )
+
+    def update_texts(self):
+        if self.win_detect:
+            self.L_3.setText("ПОБЕДА!")
+        elif self.lose_detect:
+            self.L_3.setText("ПОРАЖЕНИЕ!")
+        else:
+            self.L_3.setText("")
+
+        len_of_checked_buttons = len(self.checked)
+        count_of_left = (
+                self.value ** 2 - self.count_of_mines - len_of_checked_buttons
+        )
+        self.L_2_1.setText(
+            f"Размер поля: {self.value}/{self.value}\n"
+            f"Количество мин: {self.count_of_mines}\n"
+            f"Ост. клеток: {count_of_left}",
+        )
+
+    def update_square(self, row, col, restart):
+        if not self.first_move or restart:
+            square_number = row * self.value + col
+            square = self.buttons[square_number]
+            content = self.map[row][col]
+            if (row, col) not in self.checked and \
+                    not self.lose_detect:
+                square.setText("")
+            elif content == "*":
+                square.setText("")
+            else:
+                if (row, col) in self.checked:
+                    if content != "0":
+                        square.setText(str(content))
+            if (row, col) in self.checked:
+                if content.isdigit():
+                    if content == "1":
+                        color = "#0000b3"
+                    elif content == "2":
+                        color = "#00b33c"
+                    elif content == "3":
+                        color = "#b32400"
+                    elif content == "4":
+                        color = "#000066"
+                    else:
+                        color = "#000000"
+                    square.setStyleSheet(
+                        f"color: {color};" f"font-size: 30px;",
+                    )
+            else:
+                square.setStyleSheet("background-color: #c7c5c5;")
+            if content == "*":
+                square.setText("")
+                if self.lose_detect is True:
+                    square.setStyleSheet(
+                        "background-color: #ff8585;",
+                    )
+                    if square_number == self.last_lose_square:
+                        square.setStyleSheet(
+                            "background-color: #fc4e4e;",
+                        )
 
     def update_squares(self, restart=False):
         try:
-            if self.win_detect:
-                self.L_3.setText('ПОБЕДА!')
-            elif self.lose_detect:
-                self.L_3.setText('ПОРАЖЕНИЕ!')
-            else:
-                self.L_3.setText('')
-
-            len_of_checked_buttons = len(self.checked)
-            count_of_left = self.value ** 2 - self.count_of_mines - len_of_checked_buttons
-            self.L_2_1.setText(f"Размер поля: {self.value}/{self.value}\n"
-                               f"Количество мин: {self.count_of_mines}\n"
-                               f"Ост. клеток: {count_of_left}")
-
+            self.update_texts()
             for row in range(self.value):
                 for col in range(self.value):
-                    if not self.first_move or restart:
-                        square_number = row * self.value + col
-                        square = self.buttons[square_number]
-                        content = self.map[row][col]
-                        if (row, col) not in self.checked and not self.lose_detect:
-                            square.setText('')
-                        elif content == '*':
-                            square.setText('')
-                        else:
-                            if (row, col) in self.checked:
-                                if content != '0':
-                                    square.setText(str(content))
-                        if (row, col) in self.checked:
-                            if content.isdigit():
-                                if content == '1':
-                                    color = '#0000b3'
-                                elif content == '2':
-                                    color = '#00b33c'
-                                elif content == '3':
-                                    color = '#b32400'
-                                elif content == '4':
-                                    color = '#000066'
-                                else:
-                                    color = '#000000'
-                                square.setStyleSheet(f"color: {color};"
-                                                     f"font-size: 30px;")
-                        else:
-                            square.setStyleSheet('background-color: #c7c5c5;')
-                        if content == '*':
-                            square.setText('')
-                            if self.lose_detect is True:
-                                square.setStyleSheet('background-color: #ff8585;')
-                                if square_number == self.last_lose_square:
-                                    square.setStyleSheet('background-color: #fc4e4e;')
+                    self.update_square(row, col, restart)
         except Exception as e:
-            print(e, 'update_squares')
+            print(e, "update_squares")
 
     def on_square_clicked(self, row, col, user_click):
         try:
@@ -190,7 +231,8 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
                 self.generate_mines(row * self.value + col)
                 self.first_move = False
 
-            # Добавлено условие, чтобы игрок не мог открывать клетки, когда игра закончена
+            # Добавлено условие, чтобы игрок не мог открывать клетки,
+            # когда игра закончена
             if not self.win_detect and not self.lose_detect:
                 square = row * self.value + col
                 if square not in self.MINES and user_click or self.anti_lose:
@@ -208,7 +250,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         for mine in mines:
             self.MINES.append(mine)
             row, col = mine // self.value, mine % self.value
-            self.map[row][col] = '*'
+            self.map[row][col] = "*"
 
     def open_cell(self, square):
         i, j = square // self.value, square % self.value
@@ -216,7 +258,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
             return
         self.checked.add((i, j))
         if square in self.MINES:
-            self.map[i][j] = '*'
+            self.map[i][j] = "*"
             self.lose(square)
             return
         count = self.get_surrounding_mines(i, j)
@@ -230,26 +272,28 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         self.stop_timer()
         if self.anti_lose:
             i, j = square // self.value, square % self.value
-            self.map[i][j] = '0'
-            print('yes')
+            self.map[i][j] = "0"
         else:
             self.lose_detect = True
             self.last_lose_square = square
             for i in range(self.value):
                 for j in range(self.value):
                     if i * self.value + j in self.MINES:
-                        self.map[i][j] = '*'
+                        self.map[i][j] = "*"
 
             for mine in self.MINES:
-                self.buttons[mine].setIcon(QIcon('data/bomb.png'))
-            self.buttons[square].setIcon(QIcon('data/boom.png'))
+                self.buttons[mine].setIcon(QIcon("data/bomb.png"))
+            self.buttons[square].setIcon(QIcon("data/boom.png"))
 
         self.update_squares()
 
     def check_win(self):
         for i in range(self.value):
             for j in range(self.value):
-                if self.map[i][j] == '.' and (i * self.value + j) not in self.MINES:
+                if (
+                        self.map[i][j] == "."
+                        and (i * self.value + j) not in self.MINES
+                ):
                     return False
         self.win()
         return True
@@ -263,14 +307,17 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
     def set_to_database(self):
         try:
             difference = self.time
-            date = str(self.date_start).split('-')
+            date = str(self.date_start).split("-")
             date = f"{date[2]}-{date[1]}-{date[0]}"
-            with sqlite3.connect('database.db') as connect:
+            with sqlite3.connect("data/database.db") as connect:
                 cursor = connect.cursor()
 
                 sql = f"""
-                INSERT INTO records(value, mines, time, date)
-                VALUES ("{self.value}", "{self.count_of_mines}", "{difference}", "{date}")
+                INSERT INTO board(value, mines, time, date)
+                VALUES ("{self.value}",
+                "{self.count_of_mines}",
+                "{difference}",
+                "{date}")
                 """
 
                 cursor.execute(sql)
@@ -282,9 +329,9 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         mines = 0
         for r in range(max(0, row - 1), min(self.value - 1, row + 1) + 1):
             for c in range(max(0, col - 1), min(self.value - 1, col + 1) + 1):
-                if self.map[r][c] == '.':
+                if self.map[r][c] == ".":
                     continue
-                if self.map[r][c] == '*':
+                if self.map[r][c] == "*":
                     mines += 1
         return mines
 
@@ -300,7 +347,9 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
     def setting_slyders(self):
         # /============= Слайдер размера поля =============\
         self.S_setting_value.setValue(10)
-        self.S_setting_value.setPageStep(5)  # <--- Это свойство содержит шаг страницы.
+        self.S_setting_value.setPageStep(
+            5,
+        )  # <--- Это свойство содержит шаг страницы.
 
         self.S_setting_value.setTickInterval(5)
         self.S_setting_value.setRange(5, 15)
@@ -312,14 +361,18 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         vbox.addWidget(self.S_setting_value)
         self.setLayout(vbox)
 
-        self.S_setting_value.valueChanged[int].connect(self.LCD_setting_value.display)
+        self.S_setting_value.valueChanged[int].connect(
+            self.LCD_setting_value.display,
+        )
         self.S_setting_value.valueChanged.connect(self.change_value)
         self.LCD_setting_value.display(10)
         # \============= Слайдер размера поля =============/
 
         # /============= Слайдер количества мин =============\
         self.S_setting_count.setValue(15)
-        self.S_setting_count.setPageStep(5)  # <--- Это свойство содержит шаг страницы.
+        self.S_setting_count.setPageStep(
+            5,
+        )  # <--- Это свойство содержит шаг страницы.
 
         self.S_setting_count.setTickInterval(5)
         self.S_setting_count.setRange(5, 25)
@@ -331,7 +384,9 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         vbox.addWidget(self.S_setting_count)
         self.setLayout(vbox)
 
-        self.S_setting_count.valueChanged[int].connect(self.LCD_setting_count.display)
+        self.S_setting_count.valueChanged[int].connect(
+            self.LCD_setting_count.display,
+        )
         self.S_setting_count.valueChanged.connect(self.change_count)
         self.LCD_setting_count.display(15)
         # \============= Слайдер количества мин =============/
@@ -339,7 +394,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
     def change_value(self):
         try:
             value = int(self.LCD_setting_value.value())
-            print(f"Setting value | {value=} | {self.count_of_mines=}")
             if self.count_of_mines == 25 and value == 5:
                 self.S_setting_value.setValue(6)
             else:
@@ -351,7 +405,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
     def change_count(self):
         try:
             value = int(self.LCD_setting_count.value())
-            print(f"Setting count | {value=} | {self.value=}")
             if self.value == 5 and value == 25:
                 self.S_setting_count.setValue(24)
             else:
@@ -360,7 +413,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
             print(e)
 
     def anti_losee(self):
-        print("anti-losee")
         self.anti_lose = True
         self.play()
 
@@ -377,7 +429,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
     def del_last_game(self):
         if self.MINES:
             for mine in self.MINES:
-                self.buttons[mine].setIcon(QIcon(''))
+                self.buttons[mine].setIcon(QIcon(""))
 
     def set_time(self):
         self.L_3.setText(str(self.time_))
@@ -396,6 +448,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
         self.time += 1
         self.L_1_1.setText(str(self.time))
 
+
     def play(self):
         self.new_game()
         self.date_start = dt.datetime.now().date()
@@ -407,11 +460,12 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
 
         self.start_timer()
 
-        self.L_2_1.setText(f"Размер поля: {self.value}/{self.value}\n"
-                           f"Количество мин: {self.count_of_mines}\n"
-                           f"Ост. клеток: {self.value ** 2 - self.count_of_mines}")
+        self.L_2_1.setText(
+            f"Размер поля: {self.value}/{self.value}\n"
+            f"Количество мин: {self.count_of_mines}\n"
+            f"Ост. клеток: {self.value ** 2 - self.count_of_mines}",
+        )
 
-        # print(self.value, self.count_of_mines)
         self.stackedWidget.setCurrentWidget(self.P_play)
 
         self.setLayout(self.gridLayout)
@@ -424,7 +478,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
 
                 square = i * self.value + j
 
-                button.setObjectName(f'{square}')
+                button.setObjectName(f"{square}")
 
                 self.buttons.append(button)
 
@@ -434,49 +488,40 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
 
                 # Открыть клетку:
                 button.clicked.connect(self.open_first)
-                button.setStyleSheet('background-color: #c7c5c5;')
+                button.setStyleSheet("background-color: #c7c5c5;")
 
                 # \=================== BUTTON EVENT ===================/
 
         self.B_restart.clicked.connect(self.restart_game)
 
-        self.B_restart.setIcon(QIcon('data/restart.png'))
+        self.B_restart.setIcon(QIcon("data/restart.png"))
 
-        self.L_1.setStyleSheet("font-size: 20px; "
-                               "color: #737373; "
-                               )
+        self.L_1.setStyleSheet("font-size: 20px; " "color: #737373; ")
 
         self.L_1_1.setAlignment(Qt.AlignCenter)
 
-        self.L_1_1.setStyleSheet("font-size: 20px; "
-                                 "color: #545454; "
-                                 "text-align: center;"
-                                 )
+        self.L_1_1.setStyleSheet(
+            "font-size: 20px; " "color: #545454; " "text-align: center;",
+        )
 
-        self.L_2.setStyleSheet("font-size: 20px; "
-                               "color: #737373; "
-                               )
+        self.L_2.setStyleSheet("font-size: 20px; " "color: #737373; ")
 
-        self.L_2_1.setStyleSheet("font-size: 20px; "
-                                 "color: #545454; "
-                                 )
+        self.L_2_1.setStyleSheet("font-size: 20px; " "color: #545454; ")
 
-        self.L_3.setStyleSheet("font-size: 20px; "
-                               "color: #545454; "
-                               )
+        self.L_3.setStyleSheet("font-size: 20px; " "color: #545454; ")
 
     def open_first(self):
         square = int(self.sender().objectName())
         row, col = square // self.value, square % self.value
         self.on_square_clicked(row, col, True)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event):  # noqa
         reply = QMessageBox.question(
             self,
             "Выход",
             "Вы уверены, что хотите выйти?",
             QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            QMessageBox.No,
         )
 
         if reply == QMessageBox.Yes:
@@ -486,15 +531,36 @@ class MyWindow(QMainWindow, Ui_MainWindow):  # Главный класс
             event.ignore()
 
 
-if __name__ == '__main__':
+def create_database():
+    with sqlite3.connect("data/database.db") as connect:
+        cursor = connect.cursor()
+
+        sql = """
+        DROP TABLE IF EXISTS board;
+        """
+
+        cursor.execute(sql)
+
+        sql = """
+        CREATE TABLE board (
+        id    INTEGER PRIMARY KEY AUTOINCREMENT
+                      UNIQUE,
+        value INTEGER,
+        mines INTEGER,
+        time  INTEGER,
+        date  STRING
+        );
+        """
+
+        cursor.execute(sql)
+
+        connect.commit()
+
+
+if __name__ == "__main__":
+    create_database()
     app = QApplication(sys.argv)
     mywindow = MyWindow()
     mywindow.setStyleSheet("background-color: #d6d6d6;")
     mywindow.show()
     sys.exit(app.exec())
-
-
-"""
-Это было, через кровь, через пот, ноооо рекурсия сработала.
-Признаю, надо было использовать условия, но, я не умею, писать код, у меня лапки.
-"""
